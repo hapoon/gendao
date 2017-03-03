@@ -1,6 +1,7 @@
 package log
 
 import "log"
+import "fmt"
 
 var DebugMode bool
 
@@ -14,12 +15,12 @@ func Fatalln(v ...interface{}) {
 }
 
 func Infof(format string, args ...interface{}) {
-	log.Printf(format, args...)
+	log.Printf(fmt.Sprintf("(info) %v", format), args...)
 }
 
 func Debugf(format string, args ...interface{}) {
 	if DebugMode {
-		log.Printf(format, args...)
+		log.Printf(fmt.Sprintf("(debug) %v", format), args...)
 	}
 }
 
@@ -30,5 +31,5 @@ func Debugln(v ...interface{}) {
 }
 
 func Errorf(format string, args ...interface{}) {
-	log.Fatalf(format, args...)
+	log.Fatalf(fmt.Sprintf("(error) %v", format), args...)
 }

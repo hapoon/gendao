@@ -6,9 +6,9 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/hapoon/gendao/generator"
 	"github.com/hapoon/gendao/log"
 	"github.com/hapoon/gendao/repository"
+	"github.com/hapoon/gendao/generator"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"os"
@@ -71,25 +71,35 @@ func main() {
 			abend(err)
 		}
 	}
-
+	packageName := filepath.Base(Output)
 	if Output == "" {
 		Output, err = os.Getwd()
 		if err != nil {
 			abend(err)
 		}
+		packageName = "output"
+		Output = filepath.Join(Output,packageName)
 	}
 	excludes := strings.Split(Exclude, ",")
 	log.Infof("exclude tables %v\n", excludes)
+	var daoList []string
+	// create dao files
 	for _, v := range columns.Data {
 		if searchStrings(excludes, v.Name) {
 			continue
 		}
 		filename := fmt.Sprintf("%s.go", v.Name)
 		outputName := filepath.Join(Output,filename)
+		daoName := generator.FormatDAOName(generator.ToCamelCaseFromSnakeCase(v.Name))
+		daoList = append(daoList, daoName)
+		// If output file exists, skip creating dao file.
+		if _,err := os.Stat(outputName);err == nil {
+			continue
+		}
 		g := generator.Generator{}
-		g.GenerateHead()
+		g.GenerateHead(packageName)
 
-		g.Generate(v)
+		g.GenerateDAO(v)
 
 		src := g.Format()
 		err := ioutil.WriteFile(outputName, src, 0644)
@@ -98,6 +108,10 @@ func main() {
 		}
 		log.Infof("%s generated\n", outputName)
 	}
+	log.Debugf("daoList: %v\n", daoList)
+
+	// create dao/misc.go
+	createMisc(packageName, daoList)
 }
 
 func abend(err error) {
@@ -206,4 +220,17 @@ func searchStrings(str []string, search string) bool {
 		}
 	}
 	return false
+}
+
+func createMisc(packageName string, daoList []string) {
+	outputName := filepath.Join(Output,"misc.go")
+	g := generator.Generator{}
+	g.GenerateHead(packageName)
+	g.GenerateMISC(daoList)
+	src := g.Format()
+	err := ioutil.WriteFile(outputName, src, 0644)
+	if err != nil {
+		abend(err)
+	}
+	log.Infof("%s generated\n",outputName)	
 }
